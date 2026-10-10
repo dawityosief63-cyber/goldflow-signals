@@ -57,7 +57,14 @@ class SignalEngine:
         ValueError: If ``threshold`` is not strictly between 0 and 1.
     """
 
-    def __init__(self, threshold: float = 0.7, min_stack: int = 3) -> None:
+    def __init__(
+        self,
+        threshold: float = 0.7,
+        min_stack: int = 3,
+        ratio: float = 3.0,
+        min_vol: float = 1.0,
+        row_size: float = 0.1,
+    ) -> None:
         """Initialise the engine.
 
         Args:
@@ -73,7 +80,12 @@ class SignalEngine:
         if min_stack < 2:
             raise ValueError("min_stack must be at least 2")
         self.threshold: float = threshold
+        if ratio <= 0 or row_size <= 0:
+            raise ValueError("ratio and row_size must be positive")
         self.min_stack: int = min_stack
+        self.ratio: float = ratio
+        self.min_vol: float = min_vol
+        self.row_size: float = row_size
 
     def generate(self, chart: FootprintChart) -> List[Signal]:
         """Run all registered signal detectors on the chart.
@@ -144,46 +156,57 @@ class SignalEngine:
         return signals
 
     def _detect_stacked(self, chart: FootprintChart) -> List[Signal]:
-        """Detect runs of consecutive price rows leaning the same way.
+        """Detect stacked diagonal imbalances, as the chart builder does.
+
+        A buy imbalance at price P needs ask volume >= ``min_vol`` and
+        >= ``ratio`` x bid volume one row below. A sell imbalance needs
+        bid volume >= ``min_vol`` and >= ``ratio`` x ask volume one row
+        above. A stack is ``min_stack`` or more adjacent rows.
 
         Args:
             chart: The footprint chart to scan.
 
         Returns:
-            List[Signal]: One signal per run of at least ``min_stack``
-            consecutive rows (sorted by price within a bar) whose ask or
-            bid share exceeds ``threshold``. The signal price is the
-            lowest row of the run; strength is the run's average share.
+            List[Signal]: One signal per stack, priced at its lowest row.
+            Strength is the stack length / 10, capped at 1.0.
         """
         by_time: dict = {}
         for bar in chart.bars:
-            by_time.setdefault(bar.timestamp, []).append(bar)
+            idx = round(bar.price / self.row_size)
+            by_time.setdefault(bar.timestamp, {})[idx] = bar
         signals: List[Signal] = []
         sides = (
-            ("ask_volume", "stacked_imbalance"),
-            ("bid_volume", "stacked_imbalance_sell"),
+            ("buy", "stacked_imbalance"),
+            ("sell", "stacked_imbalance_sell"),
         )
-        for timestamp, rows in by_time.items():
-            rows = sorted(rows, key=lambda r: r.price)
-            for attr, kind in sides:
+        for ts, rows in by_time.items():
+            for side, kind in sides:
+                hits = []
+                for i in sorted(rows):
+                    bar = rows[i]
+                    if side == "buy":
+                        other = rows.get(i - 1)
+                        num = bar.ask_volume
+                        den = other.bid_volume if other else 0.0
+                    else:
+                        other = rows.get(i + 1)
+                        num = bar.bid_volume
+                        den = other.ask_volume if other else 0.0
+                    if num >= self.min_vol and num >= self.ratio * den:
+                        hits.append(i)
                 run: list = []
-                for row in rows + [None]:
-                    ratio = 0.0
-                    if row is not None:
-                        total = row.bid_volume + row.ask_volume
-                        if total:
-                            ratio = getattr(row, attr) / total
-                    if ratio > self.threshold:
-                        run.append((row, ratio))
-                        continue
-                    if len(run) >= self.min_stack:
-                        signals.append(
-                            Signal(
-                                timestamp=timestamp,
-                                price=run[0][0].price,
-                                kind=kind,
-                                strength=sum(x for _, x in run) / len(run),
+                for i in hits + [None]:
+                    if run and (i is None or i != run[-1] + 1):
+                        if len(run) >= self.min_stack:
+                            signals.append(
+                                Signal(
+                                    timestamp=ts,
+                                    price=rows[run[0]].price,
+                                    kind=kind,
+                                    strength=min(1.0, len(run) / 10),
+                                )
                             )
-                        )
-                    run = []
+                        run = []
+                    if i is not None:
+                        run.append(i)
         return signals
