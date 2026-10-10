@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-from .chart import FootprintChart
+from .chart import FootprintBar, FootprintChart
 from .engine import SignalEngine
 
-__all__ = ["FootprintChart", "SignalEngine", "__version__"]
+__all__ = ["FootprintBar", "FootprintChart", "SignalEngine", "__version__"]
