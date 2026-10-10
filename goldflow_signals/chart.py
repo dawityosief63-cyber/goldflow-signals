@@ -1,4 +1,9 @@
-"""Footprint chart data model."""
+"""Footprint chart data model.
+
+This module defines the core data structures used to represent footprint
+charts: individual price-level bars (``FootprintBar``) and a collection
+of such bars (``FootprintChart``).
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,14 @@ from typing import List
 
 @dataclass
 class FootprintBar:
-    """A single footprint bar with bid/ask volume per price level."""
+    """A single footprint bar with bid/ask volume per price level.
+
+    Attributes:
+        timestamp: ISO-8601 timestamp string identifying the bar.
+        price: The price level this bar represents.
+        bid_volume: Volume traded on the bid side at this price level.
+        ask_volume: Volume traded on the ask side at this price level.
+    """
 
     timestamp: str
     price: float
@@ -17,13 +29,21 @@ class FootprintBar:
 
     @property
     def delta(self) -> int:
-        """Net delta (ask - bid) for this bar."""
+        """Net delta (ask - bid) for this bar.
+
+        Returns:
+            int: The difference between ask volume and bid volume.
+        """
         return self.ask_volume - self.bid_volume
 
 
 @dataclass
 class FootprintChart:
-    """Collection of footprint bars."""
+    """Collection of footprint bars.
+
+    Attributes:
+        bars: Ordered list of ``FootprintBar`` instances.
+    """
 
     bars: List[FootprintBar] = field(default_factory=list)
 
@@ -32,6 +52,12 @@ class FootprintChart:
         """Load a footprint chart from a CSV file.
 
         Expected columns: timestamp, price, bid_volume, ask_volume
+
+        Args:
+            path: Filesystem path to the CSV file.
+
+        Returns:
+            FootprintChart: A new chart populated with bars from the file.
         """
         import csv
 
@@ -50,4 +76,9 @@ class FootprintChart:
         return cls(bars=bars)
 
     def __len__(self) -> int:
+        """Return the number of bars in the chart.
+
+        Returns:
+            int: The count of ``FootprintBar`` instances.
+        """
         return len(self.bars)
