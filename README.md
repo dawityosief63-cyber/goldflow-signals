@@ -21,48 +21,51 @@ pip install -e .
 
 ## Quick Start
 
+Load a footprint chart from a CSV (columns: timestamp, price, bid_volume, ask_volume) and run the signal engine. A sample file is in `data/footprint.csv`.
+
 ```python
 from goldflow_signals import FootprintChart, SignalEngine
 
-# Load or create footprint data
 chart = FootprintChart.from_csv("data/footprint.csv")
-
-# Generate signals
-engine = SignalEngine()
-signals = engine.generate(chart)
-
-for sig in signals:
-    print(sig)
-```
-
-## Usage
-
-Below is a small, runnable example that builds a minimal in-memory footprint
-chart and runs the default signal engine over it. You can paste this into a
-scratch file and execute it with `python example.py` after installing the
-package (`pip install -e .`).
-
-```python
-from goldflow_signals import FootprintChart, SignalEngine
-
-# Build a tiny synthetic footprint chart: 3 rows, each with bid/ask sizes.
-rows = [
-    {"price": 100.0, "bid": 10, "ask": 5},
-    {"price": 101.0, "bid": 8,  "ask": 12},
-    {"price": 102.0, "bid": 4,  "ask": 20},
-]
-chart = FootprintChart(rows=rows)
-
-# Run the default engine and print any signals it finds.
 engine = SignalEngine()
 for sig in engine.generate(chart):
     print(sig)
 ```
 
-Expected output (may vary by version):
+Output:
 
 ```
-Signal(type='imbalance', price=102.0, side='ask', strength=0.83)
+[imbalance] 2026-01-05T09:01:00 @ 2301.0 (strength=0.76)
+[imbalance] 2026-01-05T09:02:00 @ 2302.0 (strength=0.91)
+[imbalance_sell] 2026-01-05T09:03:00 @ 2303.0 (strength=0.88)
+[imbalance_sell] 2026-01-05T09:04:00 @ 2304.0 (strength=0.94)
+```
+
+## Usage
+
+Build a chart in memory from `FootprintBar` objects and choose your own threshold.
+
+```python
+from goldflow_signals import FootprintBar, FootprintChart, SignalEngine
+
+bars = [
+    FootprintBar("2026-01-05T09:00:00", 2300.0, bid_volume=3, ask_volume=30),
+    FootprintBar("2026-01-05T09:01:00", 2301.0, bid_volume=28, ask_volume=4),
+    FootprintBar("2026-01-05T09:02:00", 2302.0, bid_volume=10, ask_volume=11),
+]
+chart = FootprintChart(bars=bars)
+
+# A higher threshold only reports stronger imbalances.
+engine = SignalEngine(threshold=0.8)
+for sig in engine.generate(chart):
+    print(sig)
+```
+
+Output:
+
+```
+[imbalance] 2026-01-05T09:00:00 @ 2300.0 (strength=0.91)
+[imbalance_sell] 2026-01-05T09:01:00 @ 2301.0 (strength=0.88)
 ```
 
 ## Project Structure
