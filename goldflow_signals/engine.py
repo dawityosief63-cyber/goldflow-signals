@@ -58,9 +58,19 @@ class SignalEngine:
     """
 
     def __init__(self, threshold: float = 0.7) -> None:
+        """Initialise the engine.
+
+        Args:
+            threshold: Fraction of total bar volume that one side must
+                exceed to trigger a signal. Must be in the open interval
+                ``(0, 1)``. Defaults to ``0.7``.
+
+        Raises:
+            ValueError: If ``threshold`` is not strictly between 0 and 1.
+        """
         if not (0.0 < threshold < 1.0):
             raise ValueError("threshold must be in the open interval (0, 1)")
-        self.threshold = threshold
+        self.threshold: float = threshold
 
     def generate(self, chart: FootprintChart) -> List[Signal]:
         """Run all registered signal detectors on the chart.
@@ -85,21 +95,20 @@ class SignalEngine:
 
         Returns:
             List[Signal]: One ``Signal`` per bar whose ask volume is more
-            than ``self.threshold`` of the bar's total volume.
+            than ``threshold`` of the bar's total volume.
         """
         signals: List[Signal] = []
         for bar in chart.bars:
             total = bar.bid_volume + bar.ask_volume
             if total == 0:
                 continue
-            ratio = bar.ask_volume / total
-            if ratio > self.threshold:
+            if bar.ask_volume / total >= self.threshold:
                 signals.append(
                     Signal(
                         timestamp=bar.timestamp,
                         price=bar.price,
                         kind="imbalance",
-                        strength=ratio,
+                        strength=bar.ask_volume / total,
                     )
                 )
         return signals
@@ -112,21 +121,20 @@ class SignalEngine:
 
         Returns:
             List[Signal]: One ``Signal`` per bar whose bid volume is more
-            than ``self.threshold`` of the bar's total volume.
+            than ``threshold`` of the bar's total volume.
         """
         signals: List[Signal] = []
         for bar in chart.bars:
             total = bar.bid_volume + bar.ask_volume
             if total == 0:
                 continue
-            ratio = bar.bid_volume / total
-            if ratio > self.threshold:
+            if bar.bid_volume / total >= self.threshold:
                 signals.append(
                     Signal(
                         timestamp=bar.timestamp,
                         price=bar.price,
                         kind="imbalance_sell",
-                        strength=ratio,
+                        strength=bar.bid_volume / total,
                     )
                 )
         return signals
