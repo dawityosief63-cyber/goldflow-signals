@@ -60,3 +60,8 @@ def test_invalid_threshold_raises():
         SignalEngine(threshold=-0.1)
     with pytest.raises(ValueError):
         SignalEngine(threshold=1.5)
+
+
+def test_exact_threshold_does_not_fire():
+    """A share exactly equal to the threshold is not an imbalance."""
+    assert SignalEngine().generate(_chart(bid=30, ask=70)) == []

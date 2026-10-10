@@ -102,7 +102,7 @@ class SignalEngine:
             total = bar.bid_volume + bar.ask_volume
             if total == 0:
                 continue
-            if bar.ask_volume / total >= self.threshold:
+            if bar.ask_volume / total > self.threshold:
                 signals.append(
                     Signal(
                         timestamp=bar.timestamp,
@@ -128,7 +128,7 @@ class SignalEngine:
             total = bar.bid_volume + bar.ask_volume
             if total == 0:
                 continue
-            if bar.bid_volume / total >= self.threshold:
+            if bar.bid_volume / total > self.threshold:
                 signals.append(
                     Signal(
                         timestamp=bar.timestamp,
