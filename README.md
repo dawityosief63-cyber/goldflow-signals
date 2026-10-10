@@ -1,5 +1,10 @@
 # goldflow-signals
 
+> **⚠️ Early Experimental Project**
+>
+> This project is in an early, experimental stage. It is **not** a validated
+> trading strategy and is **not** financial advice. Use at your own risk.
+
 An open-source Python library for generating trading signals from footprint charts.
 
 ## Features
