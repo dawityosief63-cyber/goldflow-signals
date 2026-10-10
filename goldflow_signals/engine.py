@@ -44,8 +44,23 @@ class SignalEngine:
     """Generates signals from a footprint chart.
 
     Implements a simple delta-imbalance detector (buy-side) and a
-    mirror sell-side imbalance detector (bid volume above 70% of total).
+    mirror sell-side imbalance detector. Both detectors use a configurable
+    ``threshold`` (default ``0.7``) to decide when a side's volume share
+    of the bar's total volume is considered significant.
+
+    Args:
+        threshold: Fraction of total bar volume that one side must exceed
+            to trigger a signal. Must be in the open interval ``(0, 1)``.
+            Defaults to ``0.7``.
+
+    Raises:
+        ValueError: If ``threshold`` is not strictly between 0 and 1.
     """
+
+    def __init__(self, threshold: float = 0.7) -> None:
+        if not (0.0 < threshold < 1.0):
+            raise ValueError("threshold must be in the open interval (0, 1)")
+        self.threshold = threshold
 
     def generate(self, chart: FootprintChart) -> List[Signal]:
         """Run all registered signal detectors on the chart.
@@ -70,7 +85,7 @@ class SignalEngine:
 
         Returns:
             List[Signal]: One ``Signal`` per bar whose ask volume is more
-            than 70% of the bar's total volume.
+            than ``self.threshold`` of the bar's total volume.
         """
         signals: List[Signal] = []
         for bar in chart.bars:
@@ -78,7 +93,7 @@ class SignalEngine:
             if total == 0:
                 continue
             ratio = bar.ask_volume / total
-            if ratio > 0.7:
+            if ratio > self.threshold:
                 signals.append(
                     Signal(
                         timestamp=bar.timestamp,
@@ -92,16 +107,12 @@ class SignalEngine:
     def _detect_imbalance_sell(self, chart: FootprintChart) -> List[Signal]:
         """Detect bars where bid volume significantly exceeds ask volume.
 
-        This is the mirror of the buy-side imbalance detector: it fires
-        when bid volume is above 70% of the total volume, indicating
-        aggressive selling pressure.
-
         Args:
             chart: The footprint chart to scan.
 
         Returns:
             List[Signal]: One ``Signal`` per bar whose bid volume is more
-            than 70% of the bar's total volume.
+            than ``self.threshold`` of the bar's total volume.
         """
         signals: List[Signal] = []
         for bar in chart.bars:
@@ -109,7 +120,7 @@ class SignalEngine:
             if total == 0:
                 continue
             ratio = bar.bid_volume / total
-            if ratio > 0.7:
+            if ratio > self.threshold:
                 signals.append(
                     Signal(
                         timestamp=bar.timestamp,
