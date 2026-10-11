@@ -64,3 +64,10 @@ def test_options():
     for bad in ({"min_stack": 1}, {"ratio": 0}, {"row_size": 0}):
         with pytest.raises(ValueError):
             SignalEngine(**bad)
+
+
+def test_from_csv_accepts_decimal_volumes(tmp_path):
+    f = tmp_path / "d.csv"
+    f.write_text("timestamp,price,bid_volume,ask_volume\nt1,100.0,0.5,1.25\n")
+    chart = FootprintChart.from_csv(str(f))
+    assert chart.bars[0].ask_volume == 1.25
