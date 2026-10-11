@@ -24,15 +24,15 @@ class FootprintBar:
 
     timestamp: str
     price: float
-    bid_volume: int = 0
-    ask_volume: int = 0
+    bid_volume: float = 0
+    ask_volume: float = 0
 
     @property
-    def delta(self) -> int:
+    def delta(self) -> float:
         """Net delta (ask - bid) for this bar.
 
         Returns:
-            int: The difference between ask volume and bid volume.
+            float: The difference between ask volume and bid volume.
         """
         return self.ask_volume - self.bid_volume
 
@@ -69,8 +69,8 @@ class FootprintChart:
                     FootprintBar(
                         timestamp=row["timestamp"],
                         price=float(row["price"]),
-                        bid_volume=int(row["bid_volume"]),
-                        ask_volume=int(row["ask_volume"]),
+                        bid_volume=float(row["bid_volume"]),
+                        ask_volume=float(row["ask_volume"]),
                     )
                 )
         return cls(bars=bars)
